@@ -25,6 +25,7 @@ let package = Package(
                 .copy("Resources/common.bin"),
                 .copy("Resources/negated.bin"),
                 .copy("Resources/asterisk.bin"),
+                .copy("Resources/version.txt"),
             ]
         ),
         .executableTarget(
