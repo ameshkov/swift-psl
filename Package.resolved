@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Punycode",
+        "repositoryURL": "https://github.com/gumob/PunycodeSwift",
+        "state": {
+          "branch": null,
+          "revision": "30a462bdb4398ea835a3585472229e0d74b36ba5",
+          "version": "3.0.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
