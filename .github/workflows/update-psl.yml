@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # This is necessary to fetch all tags
 
       - name: Run update-dependencies script
         id: update
@@ -26,6 +28,9 @@ jobs:
           if [ -s /tmp/changed_files.txt ]; then
             echo "PSL files were updated"
             echo "files_changed=true" >> $GITHUB_OUTPUT
+            # Extract the PSL version
+            PSL_VERSION=$(cat Sources/PublicSuffixList/Resources/version.txt | tr -d '\n')
+            echo "psl_version=$PSL_VERSION" >> $GITHUB_OUTPUT
           else
             echo "No files were changed"
             echo "files_changed=false" >> $GITHUB_OUTPUT
@@ -36,6 +41,27 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
+      - name: Get latest tag and create new version
+        if: steps.update.outputs.files_changed == 'true'
+        id: tag_version
+        run: |
+          # Get the latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          # Parse the version number
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          # Increment the minor version
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="v$MAJOR.$MINOR.$NEW_PATCH"
+
+          echo "New version will be: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Commit changes
         if: steps.update.outputs.files_changed == 'true'
@@ -54,7 +80,7 @@ jobs:
           if [ -n "${{ github.event.inputs.commit_message }}" ]; then
             git commit -m "${{ github.event.inputs.commit_message }}"
           else
-            git commit -m "chore: update Public Suffix List to $(cat Sources/PublicSuffixList/Resources/version.txt)"
+            git commit -m "chore: update Public Suffix List to ${{ steps.update.outputs.psl_version }}"
           fi
 
           # Clean up
@@ -67,12 +93,31 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
 
+      - name: Create Tag
+        if: steps.update.outputs.files_changed == 'true'
+        run: |
+          git tag ${{ steps.tag_version.outputs.new_version }}
+          git push origin ${{ steps.tag_version.outputs.new_version }}
+
+      - name: Create GitHub Release
+        if: steps.update.outputs.files_changed == 'true'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag_version.outputs.new_version }}
+          release_name: Release ${{ steps.tag_version.outputs.new_version }}
+          body: |
+            Public suffix list was updated to version ${{ steps.update.outputs.psl_version }}.
+          draft: false
+          prerelease: false
+
       - name: Summary
         run: |
           if [ "${{ steps.update.outputs.files_changed }}" == "true" ]; then
-            echo " PSL files were updated and changes were committed"
-            echo "New version: $(cat Sources/PublicSuffixList/Resources/version.txt)"
+            echo "PSL files were updated and changes were committed"
+            echo "New PSL version: ${{ steps.update.outputs.psl_version }}"
+            echo "Created new release: ${{ steps.tag_version.outputs.new_version }}"
           else
-            echo ""
             echo "No updates were necessary, PSL is already up to date"
           fi
