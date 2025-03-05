@@ -55,13 +55,15 @@ if let (suffix, icann) = PublicSuffixList.parsePublicSuffix("example.co.uk") {
 }
 
 if let domain = PublicSuffixList.effectiveTLDPlusOne("example.co.uk") {
-    // Prints "example.co.uk
+    // Prints "example.co.uk"
     print("\(domain)")
 }
 ```
 
-**IMPORTANT:** This library is supposed to be used with ASCII characters.
-If you're dealing with punycode domains, make sure you decode them first using something like [Punycode][punycode] library.
+> [!NOTE]
+> These functions do not normalize domain names. If you're dealing with
+non-ASCII characters, make sure you encode them using something like
+[Punycode][punycode] library.
 
 [punycode]: https://github.com/gumob/PunycodeSwift
 
