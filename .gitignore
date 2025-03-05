@@ -6,3 +6,5 @@ DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode
 .netrc
+Benchmark/Data
+Benchmark/.build

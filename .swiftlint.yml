@@ -4,6 +4,8 @@ excluded:
   - ${PWD}/DerivedData
   - ${PWD}/.build
   - ${PWD}/.swiftpm
+  - ${PWD}/Benchmark/.build
+  - ${PWD}/Benchmark/.swiftpm
 
 disabled_rules:
   - discarded_notification_center_observer

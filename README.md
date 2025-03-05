@@ -23,6 +23,8 @@ suffix (or an eTLD+1) from a hostname.
 
 Existing implementation suffer from a number of issues:
 
+* Slow lookups. See the [Benchmark](#benchmark) section for more details.
+
 * Slow initialization. All of them try to be customizable and spend time on
   parsing PSL from the resources. It takes extra time and memory and causes a
   noticeable slowdown on first use.
@@ -31,8 +33,6 @@ Existing implementation suffer from a number of issues:
   to have a newer PSL version as a dependency. `swift-psl` is automatically
   updated and released periodically so you just need to make sure you're using
   the last version of the package.
-
-* Slow lookup. TODO: Add a bench table below
 
 ## How To Use The Library
 
@@ -65,6 +65,36 @@ If you're dealing with punycode domains, make sure you decode them first using s
 
 [punycode]: https://github.com/gumob/PunycodeSwift
 
-## Internals
+## Benchmark
 
-The library is using a Trie data structure to represent the public suffix list. The Trie is pre-built and loaded once at initialization.
+This repository includes a [benchmark](Benchmark) to compare the performance
+of `swift-psl` against other notable Swift implementations:
+
+1. [SwiftDomainParser](https://github.com/Dashlane/SwiftDomainParser) by Dashlane
+2. [TLDExtractSwift](https://github.com/gumob/TLDExtractSwift) by gumob
+
+### System Information
+
+```shell
+swift-driver version: 1.115 CPU: Apple M1 Max
+Memory: 32.00 GB
+ProductName:  macOS
+ProductVersion:  15.1
+BuildVersion:  24B83
+
+Swift: Apple Swift version 6.0 (swiftlang-6.0.0.9.10 clang-1600.0.26.2)
+Target: arm64-apple-macosx15.0
+```
+
+### Performance Comparison
+
+| Implementation       | Init Time       | Process Time    | Total Time      | Operations/Sec     | Relative Perf   |
+| -------------------- | --------------- | --------------- | --------------- | ------------------ | --------------- |
+| swift-psl            | 0.00 ms         | 4.33 ms         | 4.33 ms         | 2.31 M ops/s       | 1.000x          |
+| SwiftDomainParser    | 7.00 ms         | 41.33 ms        | 48.33 ms        | 241.94 K ops/s     | 0.105x          |
+| TLDExtractSwift      | 38.00 ms        | 2.26 s          | 2.30 s          | 4.42 K ops/s       | 0.002x          |
+
+Note: Lower time is better. Higher operations per second is better.
+
+The Relative Performance column shows how many times faster each implementation
+is compared to the fastest one in terms of processing speed.

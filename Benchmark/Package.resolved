@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Punycode",
+        "repositoryURL": "https://github.com/gumob/PunycodeSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "30a462bdb4398ea835a3585472229e0d74b36ba5",
+          "version": "3.0.0"
+        }
+      },
+      {
+        "package": "DomainParser",
+        "repositoryURL": "https://github.com/Dashlane/SwiftDomainParser.git",
+        "state": {
+          "branch": null,
+          "revision": "ac1df3211011ad44c20457412eeb45beb318f847",
+          "version": "1.1.0"
+        }
+      },
+      {
+        "package": "TLDExtractSwift",
+        "repositoryURL": "https://github.com/gumob/TLDExtractSwift.git",
+        "state": {
+          "branch": null,
+          "revision": "95d7f90550821eb4bc796a1eb6f6ee15f918cbe9",
+          "version": "3.0.0"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
