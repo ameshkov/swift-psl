@@ -8,6 +8,13 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cirruslabs/swiftlint-action@v1
+      - name: Run SwiftLint
+        uses: cirruslabs/swiftlint-action@v1
         with:
           version: latest
+      - name: Run swift-format
+        run: |
+          xcrun swift-format lint . \
+          --parallel \
+          --recursive \
+          --strict
