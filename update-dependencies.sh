@@ -49,7 +49,14 @@ if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
     # Update the version file
     echo "$NEW_VERSION" >"$CURRENT_VERSION_FILE"
 
-    echo "Resources have been updated to version $NEW_VERSION"
+    # Run tests to verify the new PSL data is valid
+    echo "Running tests to validate the updated PSL data..."
+    if swift test; then
+        echo "Tests passed! New PSL data is valid."
+        echo "Resources have been updated to version $NEW_VERSION"
+    else
+        echo "Tests failed, check what went wrong!"
+    fi
 else
     echo "No update needed. Current version is already up to date."
 fi

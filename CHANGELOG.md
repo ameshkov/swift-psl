@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog][keepachangelog], and this project
 adheres to [Semantic Versioning][semver].
 
+> [!NOTE]
+> Note, that the minor version bumps are not listed in the changelog file. They
+> are made automatically whenever the new version of Public Suffix List is
+> updated in the code.
+
 [keepachangelog]: https://keepachangelog.com/en/1.0.0/
 
 [semver]: https://semver.org/spec/v2.0.0.html

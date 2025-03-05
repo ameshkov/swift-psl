@@ -1,0 +1,71 @@
+name: Update Public Suffix List
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: "Custom commit message (optional)"
+        required: false
+        default: "chore: update Public Suffix List"
+
+jobs:
+  update-psl:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run update-dependencies script
+        id: update
+        run: |
+          # Run the update script
+          ./update-dependencies.sh
+
+          # Check if any files were modified
+          git diff --name-only > changed_files.txt
+          if [ -s changed_files.txt ]; then
+            echo "PSL files were updated"
+            echo "files_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "No files were changed"
+            echo "files_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure Git
+        if: steps.update.outputs.files_changed == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Commit changes
+        if: steps.update.outputs.files_changed == 'true'
+        run: |
+          # List changed files in the commit message
+          echo "The following files were updated:" > commit_msg.txt
+          cat changed_files.txt >> commit_msg.txt
+
+          # Add all changed files
+          git add .
+
+          # Use custom commit message if provided, otherwise use default
+          if [ -n "${{ github.event.inputs.commit_message }}" ]; then
+            git commit -m "${{ github.event.inputs.commit_message }}"
+          else
+            git commit -m "chore: update Public Suffix List to $(cat Sources/PublicSuffixList/Resources/version.txt)"
+          fi
+
+      - name: Push changes
+        if: steps.update.outputs.files_changed == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.update.outputs.files_changed }}" == "true" ]; then
+            echo "✅ PSL files were updated and changes were committed"
+            echo "New version: $(cat Sources/PublicSuffixList/Resources/version.txt)"
+          else
+            echo "ℹ️ No updates were necessary, PSL is already up to date"
+          fi
