@@ -92,59 +92,66 @@ public class ByteArraySuffixTrie {
     /// - Parameter string: The string to search for a suffix in.
     /// - Returns: A tuple containing the longest matching suffix and its associated value, or nil if no match is found.
     public func findLongestSuffix(in string: String) -> (String, UInt8)? {
-        let utf8 = string.utf8
+        // Using UnsafeRawBufferPointer as it avoids spending time on bound checks
+        // when accessing array elements. The trie structure is fixed and controlled
+        // internally so we can do it safely.
+        return storage.withUnsafeBytes { buffer -> (String, UInt8)? in
+            let utf8 = string.utf8
 
-        // Edge case: if the string is empty
-        if utf8.isEmpty {
-            if isEndOfSuffix(nodeOffset: rootOffset) {
-                return ("", getValue(nodeOffset: rootOffset))
+            // Edge case: if the string is empty
+            if utf8.isEmpty {
+                if isEndOfSuffix(buffer: buffer, nodeOffset: rootOffset) {
+                    return ("", getValue(buffer: buffer, nodeOffset: rootOffset))
+                }
+                return nil
             }
-            return nil
-        }
 
-        var currentNodeOffset = rootOffset
-        // Keep track of how many characters from the end matched a valid suffix so far
-        var bestMatchLength = -1
-        var bestMatchValue: UInt8 = 0
+            var currentNodeOffset = rootOffset
+            // Keep track of how many characters from the end matched a valid suffix so far
+            var bestMatchLength = -1
+            var bestMatchValue: UInt8 = 0
 
-        // We'll just count how many characters we've processed from the end
-        var count = 0
+            // We'll just count how many characters we've processed from the end
+            var count = 0
 
-        var i = utf8.endIndex
-        // Walk backward over the string. Each iteration is one character in reverse.
-        while i > utf8.startIndex {
-            utf8.formIndex(before: &i)
-            let byte = utf8[i]
+            var i = utf8.endIndex
+            // Walk backward over the string. Each iteration is one character in reverse.
+            while i > utf8.startIndex {
+                utf8.formIndex(before: &i)
+                let byte = utf8[i]
 
-            // If there's a child that matches this reversed character,
-            // move down one step in the trie
-            guard
-                let nextNodeOffset = findChildOffset(
-                    parentOffset: currentNodeOffset,
-                    char: byte
-                )
-            else {
-                break  // no further match possible
+                // If there's a child that matches this reversed character,
+                // move down one step in the trie
+                guard
+                    let nextNodeOffset = findChildOffset(
+                        buffer: buffer,
+                        parentOffset: currentNodeOffset,
+                        char: byte
+                    )
+                else {
+                    break  // no further match possible
+                }
+                currentNodeOffset = nextNodeOffset
+                count += 1
+
+                // If we've hit a valid suffix end, record the number of matched chars and the value
+                if isEndOfSuffix(buffer: buffer, nodeOffset: currentNodeOffset) {
+                    bestMatchLength = count
+                    bestMatchValue = getValue(buffer: buffer, nodeOffset: currentNodeOffset)
+                }
             }
-            currentNodeOffset = nextNodeOffset
-            count += 1
 
-            // If we've hit a valid suffix end, record the number of matched chars and the value
-            if isEndOfSuffix(nodeOffset: currentNodeOffset) {
-                bestMatchLength = count
-                bestMatchValue = getValue(nodeOffset: currentNodeOffset)
+            // If we never found any valid match, return nil
+            if bestMatchLength == -1 {
+                return nil
             }
-        }
 
-        // If we never found any valid match, return nil
-        if bestMatchLength == -1 {
-            return nil
-        }
+            // bestMatchLength is how many characters from the end are matched.
+            // So we extract that portion from the original string.
+            let start = utf8.index(string.endIndex, offsetBy: -bestMatchLength)
 
-        // bestMatchLength is how many characters from the end are matched.
-        // So we extract that portion from the original string.
-        let start = utf8.index(string.endIndex, offsetBy: -bestMatchLength)
-        return (String(string[start..<string.endIndex]), bestMatchValue)
+            return (String(string[start..<string.endIndex]), bestMatchValue)
+        }
     }
 }
 
@@ -196,13 +203,17 @@ extension ByteArraySuffixTrie {
     }
 
     /// Perform a binary search over the children's `(char, offset)` pairs.
-    private func findChildOffset(parentOffset: UInt32, char: UInt8) -> UInt32? {
+    private func findChildOffset(
+        buffer: UnsafeRawBufferPointer,
+        parentOffset: UInt32,
+        char: UInt8
+    ) -> UInt32? {
         var cursor = Int(parentOffset)
 
         // Skip isEndOfSuffix flag and value
         cursor += 2
 
-        let childrenCount = readUInt8(at: cursor)
+        let childrenCount = readUInt8(buffer: buffer, at: cursor)
         cursor += 1
 
         // Each child has 5 bytes: 1 for char, 4 for offset.
@@ -216,9 +227,9 @@ extension ByteArraySuffixTrie {
             let mid = (low + high) >> 1
             let childRecordOffset = start + mid * childStride
 
-            let childChar = readUInt8(at: childRecordOffset)
+            let childChar = readUInt8(buffer: buffer, at: childRecordOffset)
             if childChar == char {
-                return readUInt32(at: childRecordOffset + 1)
+                return readUInt32(buffer: buffer, at: childRecordOffset + 1)
             } else if childChar < char {
                 low = mid + 1
             } else {
@@ -230,19 +241,19 @@ extension ByteArraySuffixTrie {
     }
 
     /// Read the isEndOfSuffix flag for a node at `nodeOffset`.
-    private func isEndOfSuffix(nodeOffset: UInt32) -> Bool {
+    private func isEndOfSuffix(buffer: UnsafeRawBufferPointer, nodeOffset: UInt32) -> Bool {
         let cursor = Int(nodeOffset)
 
         // Read isEndOfSuffix flag (1 byte)
-        return readUInt8(at: cursor) == 1
+        return readUInt8(buffer: buffer, at: cursor) == 1
     }
 
     /// Read the value for a node at `nodeOffset`.
-    private func getValue(nodeOffset: UInt32) -> UInt8 {
+    private func getValue(buffer: UnsafeRawBufferPointer, nodeOffset: UInt32) -> UInt8 {
         let cursor = Int(nodeOffset)
 
         // Skip isEndOfSuffix flag
-        return readUInt8(at: cursor + 1)
+        return readUInt8(buffer: buffer, at: cursor + 1)
     }
 }
 
@@ -263,6 +274,19 @@ extension ByteArraySuffixTrie {
         let byte1 = UInt32(storage[index + 1]) << 8
         let byte2 = UInt32(storage[index + 2]) << 16
         let byte3 = UInt32(storage[index + 3]) << 24
+        return byte0 | byte1 | byte2 | byte3
+    }
+
+    private func readUInt8(buffer: UnsafeRawBufferPointer, at index: Int) -> UInt8 {
+        return buffer[index]
+    }
+
+    private func readUInt32(buffer: UnsafeRawBufferPointer, at index: Int) -> UInt32 {
+        // Manual bit-shift
+        let byte0 = UInt32(buffer[index])
+        let byte1 = UInt32(buffer[index + 1]) << 8
+        let byte2 = UInt32(buffer[index + 2]) << 16
+        let byte3 = UInt32(buffer[index + 3]) << 24
         return byte0 | byte1 | byte2 | byte3
     }
 }

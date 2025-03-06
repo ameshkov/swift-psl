@@ -16,7 +16,15 @@ adheres to [Semantic Versioning][semver].
 
 ## [Unreleased]
 
-[unreleased]: https://github.com/ameshkov/swift-psl/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/ameshkov/swift-psl/compare/v1.1.1...HEAD
+
+## [1.1.1] - 2025-03-06
+
+### Changed
+
+* A few more performance improvements.
+
+[1.1.1]: https://github.com/ameshkov/swift-psl/releases/tag/v1.1.1
 
 ## [1.1.0] - 2025-03-06
 

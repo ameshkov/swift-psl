@@ -1,4 +1,6 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.6
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
 import PackageDescription
 
 let package = Package(
@@ -11,10 +13,10 @@ let package = Package(
         .package(path: ".."),
 
         // SwiftDomainParser by Dashlane
-        .package(url: "https://github.com/Dashlane/SwiftDomainParser.git", from: "1.0.0"),
+        .package(url: "https://github.com/Dashlane/SwiftDomainParser.git", exact: "1.1.0"),
 
         // TLDExtractSwift by gumob
-        .package(url: "https://github.com/gumob/TLDExtractSwift.git", from: "3.0.0"),
+        .package(url: "https://github.com/gumob/TLDExtractSwift.git", exact: "3.0.0"),
     ],
     targets: [
         .executableTarget(

@@ -13,7 +13,7 @@ public enum PublicSuffixList {
     // MARK: - Private Properties and Initialization
 
     /// ByteArraySuffixTrie loaded from the bundled common rules binary file
-    private static let commonTrie: ByteArraySuffixTrie = {
+    nonisolated(unsafe) private static let commonTrie: ByteArraySuffixTrie = {
         guard
             let url = Bundle.module.url(
                 forResource: "common",
@@ -27,7 +27,7 @@ public enum PublicSuffixList {
     }()
 
     /// ByteArraySuffixTrie loaded from the bundled negated rules binary file
-    private static let negatedTrie: ByteArraySuffixTrie = {
+    nonisolated(unsafe) private static let negatedTrie: ByteArraySuffixTrie = {
         guard
             let url = Bundle.module.url(
                 forResource: "negated",
@@ -41,7 +41,7 @@ public enum PublicSuffixList {
     }()
 
     /// ByteArraySuffixTrie loaded from the bundled asterisk rules binary file
-    private static let asteriskTrie: ByteArraySuffixTrie = {
+    nonisolated(unsafe) private static let asteriskTrie: ByteArraySuffixTrie = {
         guard
             let url = Bundle.module.url(
                 forResource: "asterisk",
