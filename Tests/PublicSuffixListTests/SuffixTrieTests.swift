@@ -194,7 +194,7 @@ final class SuffixTrieTests: XCTestCase {
     func testPerformance_InsertionWithValues() {
         measure {
             let trie = SuffixTrie()
-            for i in 0..<1000 {
+            for i in 0..<10000 {
                 let value = UInt8(i % 256)
                 trie.insert(suffix: "com", value: value)
                 trie.insert(suffix: "co.uk", value: value)
@@ -217,7 +217,7 @@ final class SuffixTrieTests: XCTestCase {
         }
 
         measure {
-            for _ in 0..<1000 {
+            for _ in 0..<10000 {
                 _ = trie.findLongestSuffix(in: "example.com") as (String, UInt8)?
                 _ = trie.findLongestSuffix(in: "example.co.uk") as (String, UInt8)?
                 _ = trie.findLongestSuffix(in: "example.org") as (String, UInt8)?

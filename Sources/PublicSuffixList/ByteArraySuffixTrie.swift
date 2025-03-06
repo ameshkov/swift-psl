@@ -24,6 +24,28 @@ import Foundation
 /// **Note**:
 ///  - This implementation is optimized for read-mostly operations
 ///  - Ideal for static datasets that don't change frequently
+///
+/// The internal binary representation of each node in the trie follows this structure:
+///
+/// ```
+/// +-------------------+---------+----------------+------------------------------------+
+/// | isEndOfSuffix     | value   | childrenCount  | child records (char + offset)      |
+/// | (1 byte)          | (1 byte)| (1 byte)       | (5 bytes each: 1 for char, 4 for   |
+/// | 0=false, 1=true   |         |                | child node offset)                 |
+/// +-------------------+---------+----------------+------------------------------------+
+/// ```
+///
+/// - **isEndOfSuffix** (1 byte): Flag indicating if this node represents the end of a valid suffix
+/// - **value** (1 byte): The value associated with this suffix (only meaningful if isEndOfSuffix=1)
+/// - **childrenCount** (1 byte): Number of child nodes
+/// - **child records** (variable length): Array of (character, node offset) pairs
+///   - Each record is 5 bytes: 1 byte for the character, 4 bytes for the offset
+///   - Child records are sorted by character for binary search lookup
+///   - Offsets are stored in little-endian byte order
+///
+/// This compact representation allows the entire trie to be stored in a single contiguous
+/// byte array, with nodes referencing each other via offsets rather than pointers.
+/// This design enables efficient serialization/deserialization and minimizes memory overhead.
 public class ByteArraySuffixTrie {
     /// The raw byte array that holds all trie nodes.
     private var storage: [UInt8] = []
@@ -134,7 +156,13 @@ extension ByteArraySuffixTrie {
         // The offset where this node will begin in `storage`.
         let nodeStartOffset = UInt32(storage.count)
 
-        // 1) childrenCount (1 byte)
+        // 1) isEndOfSuffix flag (1 byte)
+        appendUInt8(node.isEndOfSuffix ? 1 : 0)
+
+        // 2) value (1 byte)
+        appendUInt8(node.value)
+
+        // 3) childrenCount (1 byte)
         let childrenCount = UInt8(node.children.count)
         appendUInt8(childrenCount)
 
@@ -147,12 +175,6 @@ extension ByteArraySuffixTrie {
         storage.append(
             contentsOf: repeatElement(0, count: Int(childrenCount) * 5)
         )
-
-        // 2) isEndOfSuffix flag (1 byte)
-        appendUInt8(node.isEndOfSuffix ? 1 : 0)
-
-        // 3) value (1 byte)
-        appendUInt8(node.value)
 
         // Build children, patch them in
         let sortedChildren = node.children.sorted { $0.key < $1.key }
@@ -173,9 +195,12 @@ extension ByteArraySuffixTrie {
         return nodeStartOffset
     }
 
-    /// Perform a binary search over the children’s `(char, offset)` pairs.
+    /// Perform a binary search over the children's `(char, offset)` pairs.
     private func findChildOffset(parentOffset: UInt32, char: UInt8) -> UInt32? {
         var cursor = Int(parentOffset)
+
+        // Skip isEndOfSuffix flag and value
+        cursor += 2
 
         let childrenCount = readUInt8(at: cursor)
         cursor += 1
@@ -191,7 +216,7 @@ extension ByteArraySuffixTrie {
             let mid = (low + high) >> 1
             let childRecordOffset = start + mid * childStride
 
-            let childChar = storage[childRecordOffset]
+            let childChar = readUInt8(at: childRecordOffset)
             if childChar == char {
                 return readUInt32(at: childRecordOffset + 1)
             } else if childChar < char {
@@ -206,11 +231,7 @@ extension ByteArraySuffixTrie {
 
     /// Read the isEndOfSuffix flag for a node at `nodeOffset`.
     private func isEndOfSuffix(nodeOffset: UInt32) -> Bool {
-        var cursor = Int(nodeOffset)
-
-        // Skip children section
-        let childrenCount = readUInt8(at: cursor)
-        cursor += 1 + (Int(childrenCount) * 5)
+        let cursor = Int(nodeOffset)
 
         // Read isEndOfSuffix flag (1 byte)
         return readUInt8(at: cursor) == 1
@@ -218,17 +239,10 @@ extension ByteArraySuffixTrie {
 
     /// Read the value for a node at `nodeOffset`.
     private func getValue(nodeOffset: UInt32) -> UInt8 {
-        var cursor = Int(nodeOffset)
-
-        // Skip children section
-        let childrenCount = readUInt8(at: cursor)
-        cursor += 1 + (Int(childrenCount) * 5)
+        let cursor = Int(nodeOffset)
 
         // Skip isEndOfSuffix flag
-        cursor += 1
-
-        // Read value (1 byte)
-        return readUInt8(at: cursor)
+        return readUInt8(at: cursor + 1)
     }
 }
 

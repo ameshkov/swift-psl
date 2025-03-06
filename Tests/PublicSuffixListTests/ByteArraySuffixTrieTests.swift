@@ -261,7 +261,7 @@ final class ByteArraySuffixTrieTests: XCTestCase {
         let trie = ByteArraySuffixTrie(from: suffixTrie)
 
         measure {
-            for _ in 0..<1000 {
+            for _ in 0..<10000 {
                 _ = trie.findLongestSuffix(in: "example.com") as (String, UInt8)?
                 _ = trie.findLongestSuffix(in: "example.co.uk") as (String, UInt8)?
                 _ = trie.findLongestSuffix(in: "example.org") as (String, UInt8)?

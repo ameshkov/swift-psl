@@ -18,6 +18,14 @@ adheres to [Semantic Versioning][semver].
 
 [unreleased]: https://github.com/ameshkov/swift-psl/compare/v1.0.0...HEAD
 
+## [1.1.0] - 2025-03-06
+
+### Changed
+
+* Slightly improved suffix trie performance.
+
+[1.1.0]: https://github.com/ameshkov/swift-psl/releases/tag/v1.1.0
+
 ## [1.0.0] - 2025-03-05
 
 ### Added
